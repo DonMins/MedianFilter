@@ -27,4 +27,7 @@ Such noise reduction is a typical pre-processing step to improve the results of 
 GPU time = 8.9 ms
 
 ## Input Image
-! []
+![Описание изображения](lena.bmp)
+
+## Output Image
+![Описание изображения](result.bmp)
