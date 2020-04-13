@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "bmp/EasyBMP.h"
 #include <stdio.h>
+#include <time.h>
 
 using namespace std;
 
@@ -78,6 +79,22 @@ float *readImage(char *filePathInput, unsigned int *rows, unsigned int *cols) {
 	return imageAsArray;
 }
 
+BMP readImageForCPU(char *filePathInput) {
+	BMP Image;
+	Image.ReadFromFile(filePathInput);
+	// Преобразуем картику в черно-белую
+	for (int i = 0; i < Image.TellWidth(); i++) {
+		for (int j = 0; j < Image.TellHeight(); j++) {
+			double Temp = 0.30*(Image(i, j)->Red) + 0.59*(Image(i, j)->Green) + 0.11*(Image(i, j)->Blue);
+			Image(i, j)->Red = (unsigned char)Temp;
+			Image(i, j)->Green = (unsigned char)Temp;
+			Image(i, j)->Blue = (unsigned char)Temp;
+		}
+	}
+	Image.SetBitDepth(8);
+	CreateGrayscaleColorTable(Image);
+	return Image;
+}
 
 void writeImage(char *filePath, float *grayscale, unsigned int rows, unsigned int cols) {
 	BMP Output;
@@ -96,12 +113,58 @@ void writeImage(char *filePath, float *grayscale, unsigned int rows, unsigned in
 	Output.WriteToFile(filePath);
 }
 
+BMP MedianFilterCPU(BMP image){
+	float mask[COUNT_POINTS] = { 0,0,0,0,0,0,0,0,0 };
+	BMP output;
+	output.SetSize(image.TellHeight(), image.TellWidth());
+
+	for (int row = 0; row < image.TellWidth(); row++) {
+		for (int col = 0; col < image.TellHeight(); col++) {
+			//Границы 0 заполнил
+			if ((row == 0) || (col == 0) || (row == image.TellHeight() - 1) || (col == image.TellWidth() - 1)) { 
+				RGBApixel pixel;
+				pixel.Red = 0; pixel.Green = 0;	pixel.Blue = 0;
+				output.SetPixel(col, row, pixel);
+			}
+			else {
+				for (int x = 0; x < WINDOW_SIZE; x++) {
+					for (int y = 0; y < WINDOW_SIZE; y++) {
+						mask[x*WINDOW_SIZE + y] = image.GetPixel((col + y - 1), (row + x - 1)).Red; 
+					}
+				}
+
+				// Отсортировали значения в маске 
+				for (int i = 1; i < COUNT_POINTS; i++) {
+					for (int j = i; j > 0 && mask[j - 1] > mask[j]; j--) {
+						int tmp = mask[j - 1];
+						mask[j - 1] = mask[j];
+						mask[j] = tmp;
+					}
+				}
+				RGBApixel pixel;
+				pixel.Red = mask[4]; pixel.Green = mask[4];	pixel.Blue = mask[4];
+				output.SetPixel(col, row, pixel);
+
+			}
+		}
+	}
+	return output;
+}
+
 int main() {
 	setlocale(LC_ALL, "RUS");
 
 	unsigned int rows, cols;
 	// считали картинку 
 	float * imageAsArray = readImage ("lena.bmp", &rows, &cols);
+	std::cout << "Размер:" << rows<<"x"<<  cols<< std::endl;
+	BMP imgCPU = readImageForCPU("lena.bmp");
+	clock_t  start_time = clock();
+	BMP outCPU = MedianFilterCPU(imgCPU);
+	clock_t  end_time = clock();
+	std::cout << "Время на CPU = " << (double)((end_time - start_time) * 1000 / CLOCKS_PER_SEC) << " мсек" << std::endl;
+	outCPU.WriteToFile("resultCPU.bmp");
+
 
 	//Создали дескриптор канала с форматом Float
 	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
@@ -115,7 +178,7 @@ int main() {
 	// Установили параметры текстуры
 	tex.addressMode[0] = cudaAddressModeClamp;
 	tex.addressMode[1] = cudaAddressModeClamp;
-	tex.filterMode = cudaFilterModeLinear;
+	tex.filterMode = cudaFilterModePoint;
 
 	// Привязали массив к текстуре
 	CUDA_CHECK_ERROR(cudaBindTextureToArray(tex, cuArray, channelDesc));
