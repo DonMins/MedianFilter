@@ -29,5 +29,8 @@ GPU time = 8.9 ms
 ## Input Image
 ![Описание изображения](lena.bmp)
 
-## Output Image
-![Описание изображения](result.bmp)
+## OutputCPU Image
+![Описание изображения](resultCPU.bmp)
+
+## OutputGPU Image
+![Описание изображения](resultGPU.bmp)
