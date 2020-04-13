@@ -23,8 +23,14 @@ Such noise reduction is a typical pre-processing step to improve the results of 
 
 
 ## Results
-
-GPU time = 8.9 ms
+| size image | time CPU |  time GPU  | Acceleration | 
+|------------|----------|------------|--------------|
+|   64х64    | 4 ms     |0.35 ms     |    11.42     |  
+|   128х128  | 10 ms    |0.58 ms     |    17.24     | 
+|   256х256  | 38 ms    | 2.06 ms    |    18.45     |   
+|   512х512  | 173 ms   | 8.9 ms     |    19.4      |   
+|   1024х1024| 591 ms   | 26.1 ms    |    22.64     |   
+|   2048х2048| 2425 ms  | 92.3 ms    |    26.27     | 
 
 ## Input Image
 ![Описание изображения](lena.bmp)
